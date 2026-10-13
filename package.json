@@ -1,0 +1,15 @@
+{
+  "name": "bookmarklets",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "node scripts/build.js",
+    "check": "biome check && tsc --noEmit",
+    "fix": "biome check --write"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "2.5.15",
+    "esbuild": "^0.28.2",
+    "typescript": "^7.0.2"
+  }
+}
