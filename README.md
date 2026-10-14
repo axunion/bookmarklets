@@ -7,16 +7,16 @@ A collection of bookmarklets. Each one is a TypeScript directory, built into a `
 ```
 src/<name>/index.ts  # one bookmarklet per directory, kebab-case name; extra modules live beside index.ts
 scripts/build.js     # bundles and minifies every src/<name>/index.ts with esbuild
-dist/<name>.txt      # generated javascript: URL (committed)
+dist/index.html      # generated page listing every bookmarklet as a draggable link (not committed)
 ```
 
-`dist/` is committed so a bookmarklet can be copied straight from GitHub without building.
+Pushing to `main` builds and deploys `dist/` to GitHub Pages (repository Settings → Pages → Source: GitHub Actions).
 
 ## Development
 
 ```sh
 pnpm install
-pnpm build       # src/*/index.ts -> dist/*.txt
+pnpm build       # src/*/index.ts -> dist/index.html
 pnpm check       # Biome lint + format check, then tsc --noEmit (esbuild does not check types)
 pnpm fix         # apply Biome fixes
 ```
@@ -25,9 +25,7 @@ To add a bookmarklet, create `src/<name>/index.ts`, run `pnpm build`, and add a 
 
 ## Usage
 
-1. Open `dist/<name>.txt` and copy its contents.
-2. Create a new bookmark in the browser and paste the contents into its URL field.
-3. Click the bookmark on the target page.
+Open the published page and drag a link to the browser's bookmarks bar, then click the bookmark on the target page.
 
 ## Bookmarklets
 
