@@ -1,0 +1,83 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex">
+  <title>Bookmarklets</title>
+  <style>
+    :root {
+      --bg: #f5f6f7;
+      --fg: #2b2d2f;
+      --surface: #fff;
+      --border: #d5d8db;
+      --accent: #2b8fc4;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      padding: 48px 16px;
+      background: var(--bg);
+      color: var(--fg);
+      font: 16px/1.5 system-ui, sans-serif;
+      -webkit-text-size-adjust: 100%;
+    }
+
+    main {
+      max-width: 480px;
+      margin: 0 auto;
+    }
+
+    h1 {
+      margin: 0 0 32px;
+      font-size: 1.5rem;
+      font-weight: 600;
+    }
+
+    ul {
+      display: grid;
+      gap: 12px;
+      margin: 0;
+      padding: 0;
+      list-style: none;
+    }
+
+    a {
+      display: flex;
+      align-items: center;
+      min-height: 56px;
+      padding: 0 20px;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      background: var(--surface);
+      color: inherit;
+      font-family: ui-monospace, "SF Mono", Menlo, monospace;
+      text-decoration: none;
+      transition: border-color 0.15s, transform 0.15s;
+    }
+
+    a:hover,
+    a:focus-visible {
+      border-color: var(--accent);
+      outline: none;
+    }
+
+    a:active {
+      transform: scale(0.98);
+    }
+  </style>
+</head>
+<body>
+  <main>
+    <h1>Bookmarklets</h1>
+    <ul>
+{{links}}
+    </ul>
+  </main>
+</body>
+</html>

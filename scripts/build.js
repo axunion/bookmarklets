@@ -1,4 +1,4 @@
-import { mkdir, readdir, rm, writeFile } from "node:fs/promises";
+import { mkdir, readdir, readFile, rm, writeFile } from "node:fs/promises";
 import { build } from "esbuild";
 
 const names = (await readdir("src", { withFileTypes: true }))
@@ -8,6 +8,7 @@ const names = (await readdir("src", { withFileTypes: true }))
 await rm("dist", { recursive: true, force: true });
 await mkdir("dist");
 
+const links = [];
 for (const name of names) {
   const { outputFiles } = await build({
     entryPoints: [`src/${name}/index.ts`],
@@ -18,6 +19,12 @@ for (const name of names) {
     write: false,
   });
   const url = `javascript:${encodeURIComponent(outputFiles[0].text.trim())}`;
-  await writeFile(`dist/${name}.txt`, `${url}\n`);
-  console.log(`dist/${name}.txt`);
+  links.push(`      <li><a href="${url}">${name}</a></li>`);
 }
+
+const template = await readFile("scripts/index.template.html", "utf8");
+await writeFile(
+  "dist/index.html",
+  template.replace("{{links}}", links.join("\n")),
+);
+console.log("dist/index.html");
