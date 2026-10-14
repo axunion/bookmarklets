@@ -6,7 +6,8 @@ Each bookmarklet is built into a `javascript:` link on a GitHub Pages index page
 
 - Create `src/<kebab-case-name>/index.ts`; put extra modules beside it. Only `index.ts` is an entry point.
 - Add a row to the README bookmarklet list.
-- Run `pnpm fix`, `pnpm check` and `pnpm build` before finishing.
+- Put logic that does not touch the DOM in its own module with a `*.test.ts` beside it.
+- Run `pnpm fix`, `pnpm check`, `pnpm test` and `pnpm build` before finishing.
 - Use no external libraries or network resources (CDNs, remote scripts).
 
 ## Rules

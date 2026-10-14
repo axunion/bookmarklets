@@ -17,7 +17,8 @@ Pushing to `main` builds and deploys `dist/` to GitHub Pages (repository Setting
 ```sh
 pnpm install
 pnpm build       # src/*/index.ts -> dist/index.html
-pnpm check       # Biome lint + format check, then tsc --noEmit (esbuild does not check types)
+pnpm check       # Biome lint + format check, then tsc --noEmit for sources and tests (esbuild does not check types)
+pnpm test        # unit tests (node:test) for DOM-free modules, e.g. src/extract-cast/parse.ts
 pnpm fix         # apply Biome fixes
 ```
 
@@ -32,3 +33,4 @@ Open the published page and drag a link to the browser's bookmarks bar, then cli
 | Name | Description |
 | ---- | ----------- |
 | unlock-page | Lifts page restrictions on right-click, copy, cut, paste, text selection and drag |
+| extract-cast | Extracts voice actors and characters from an anime page into an editable table and copies them as JSON |
