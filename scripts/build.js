@@ -1,16 +1,16 @@
 import { mkdir, readdir, rm, writeFile } from "node:fs/promises";
-import { basename } from "node:path";
 import { build } from "esbuild";
 
-const files = (await readdir("src")).filter((f) => f.endsWith(".ts"));
+const names = (await readdir("src", { withFileTypes: true }))
+  .filter((entry) => entry.isDirectory())
+  .map((entry) => entry.name);
 
 await rm("dist", { recursive: true, force: true });
 await mkdir("dist");
 
-for (const file of files) {
-  const name = basename(file, ".ts");
+for (const name of names) {
   const { outputFiles } = await build({
-    entryPoints: [`src/${file}`],
+    entryPoints: [`src/${name}/index.ts`],
     bundle: true,
     format: "iife",
     minify: true,
