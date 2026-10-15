@@ -7,10 +7,10 @@ const STYLE = `
     position: fixed; top: 0; right: 0; bottom: 0; z-index: 2147483647;
     display: flex; flex-direction: column; width: min(480px, 100vw);
     background: #fff; color: #2b2d2f; box-shadow: 0 0 12px rgba(0, 0, 0, .4);
-    font: 14px/1.4 system-ui, sans-serif; transition: transform .25s;
+    font: 14px/1.4 system-ui, sans-serif;
   }
-  .panel.folded { transform: translateX(105%); }
   .bar { display: flex; gap: 6px; padding: 6px; background: #ebedee; }
+  .bar .fields { display: flex; flex: 1; gap: 2px; min-width: 0; }
   .bar .title { flex: 1; min-width: 0; }
   .bar .year { width: 4em; }
   input, textarea {
@@ -23,18 +23,22 @@ const STYLE = `
     font: 13px/1.6 ui-monospace, "SF Mono", Menlo, monospace;
   }
   button {
-    min-width: 32px; min-height: 32px; padding: 0 12px; border: 1px solid #c5c6c7;
-    border-radius: 6px; background: #fff; color: inherit; font: inherit; cursor: pointer;
+    display: flex; align-items: center; justify-content: center; width: 32px; height: 32px;
+    padding: 0; border: 1px solid #c5c6c7; border-radius: 6px; background: #fff;
+    color: inherit; font: inherit; cursor: pointer;
+  }
+  svg {
+    width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 2;
+    stroke-linecap: round; stroke-linejoin: round;
   }
   button.primary { border-color: #2b8fc4; background: #2b8fc4; color: #fff; }
-  .tab {
-    position: fixed; top: 0; right: 0; z-index: 2147483647; width: 28px; height: 72px;
-    border-radius: 0 0 0 8px; background: rgba(43, 45, 47, .55); color: #fff;
-    display: none; align-items: center; justify-content: center; cursor: pointer; font: 16px system-ui;
-  }
-  .tab.visible { display: flex; }
   [hidden] { display: none !important; }
 `;
+
+const ICON_BUILD =
+  '<svg viewBox="0 0 24 24"><path d="M9 4C7 4 6 5 6 7v3c0 1-1 2-2 2 1 0 2 1 2 2v3c0 2 1 3 3 3M15 4c2 0 3 1 3 3v3c0 1 1 2 2 2-1 0-2 1-2 2v3c0 2-1 3-3 3"/></svg>';
+const ICON_EDIT =
+  '<svg viewBox="0 0 24 24"><path d="M4 20l1-5L16 4l4 4L9 19z"/></svg>';
 
 type Child = Node | string;
 
@@ -74,8 +78,16 @@ export function showPanel(options: {
   });
   const edit = el("textarea", { value: options.text, spellcheck: false });
   const result = el("textarea", { readOnly: true, hidden: true });
-  const build = el("button", { className: "primary", textContent: "Build" });
-  const back = el("button", { textContent: "Edit", hidden: true });
+  const build = el("button", {
+    className: "primary",
+    title: "Build",
+    innerHTML: ICON_BUILD,
+  });
+  const back = el("button", {
+    title: "Edit",
+    innerHTML: ICON_EDIT,
+    hidden: true,
+  });
 
   const show = (building: boolean) => {
     edit.hidden = building;
@@ -84,7 +96,16 @@ export function showPanel(options: {
     back.hidden = !building;
   };
 
+  // Edits are lost on close, so ask first; a Build has already copied them out.
+  let dirty = false;
+  for (const field of [title, year, edit]) {
+    field.oninput = () => {
+      dirty = true;
+    };
+  }
+
   build.onclick = () => {
+    dirty = false;
     result.value = options.onBuild({
       title: title.value,
       year: year.value,
@@ -106,27 +127,21 @@ export function showPanel(options: {
       { className: "bar" },
       build,
       back,
-      title,
-      year,
+      el("div", { className: "fields" }, title, year),
       el("button", {
         textContent: "×",
-        title: "Hide",
-        onclick: () => fold(true),
+        title: "Close",
+        onclick: () => {
+          if (!dirty || confirm("Discard your edits and close?")) {
+            host.remove();
+          }
+        },
       }),
     ),
     edit,
     result,
   );
-  const tab = el("div", { className: "tab", textContent: "‹", title: "Show" });
 
-  // Hiding keeps the edits; hovering or tapping the edge tab brings the panel back.
-  const fold = (folded: boolean) => {
-    panel.classList.toggle("folded", folded);
-    tab.classList.toggle("visible", folded);
-  };
-  tab.onmouseenter = () => fold(false);
-  tab.onclick = () => fold(false);
-
-  root.append(el("style", { textContent: STYLE }), panel, tab);
+  root.append(el("style", { textContent: STYLE }), panel);
   document.body.append(host);
 }
