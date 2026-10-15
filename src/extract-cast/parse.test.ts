@@ -33,26 +33,40 @@ test("strips bracketed footnotes and trailing text from names", () => {
   assert.deepEqual(cast("A[注 1]", "声 - 佐藤[26]"), [["佐藤", "A"]]);
 });
 
-test("ignores an age or version note, keeping both actors", () => {
+test("keeps an age or version note on the actor", () => {
   assert.deepEqual(
     cast("シャンクス", "声 - 池田秀一、島﨑信長（少年期〈959話 - 〉）"),
     [
       ["池田秀一", "シャンクス"],
-      ["島﨑信長", "シャンクス"],
+      ["島﨑信長(少年期〈959話 - 〉)", "シャンクス"],
     ],
   );
 });
 
-test("splits an actor change chain and drops episode ranges", () => {
+test("keeps a media note such as a drama CD", () => {
+  assert.deepEqual(cast("A", "声 - 佐藤、鈴木（ドラマCD）"), [
+    ["佐藤", "A"],
+    ["鈴木(ドラマCD)", "A"],
+  ]);
+});
+
+test("drops notes without any letters", () => {
+  assert.deepEqual(cast("A", "声 - 佐藤（1）、鈴木（ - ）"), [
+    ["佐藤", "A"],
+    ["鈴木", "A"],
+  ]);
+});
+
+test("splits an actor change chain and keeps episode ranges as notes", () => {
   assert.deepEqual(
     cast(
       "ベン・ベックマン",
       "声 - 曽我部和恭（4話）→田原アルノ（488話 - 1112話）→三木眞一郎（1156話 - ）",
     ),
     [
-      ["曽我部和恭", "ベン・ベックマン"],
-      ["田原アルノ", "ベン・ベックマン"],
-      ["三木眞一郎", "ベン・ベックマン"],
+      ["曽我部和恭(4話)", "ベン・ベックマン"],
+      ["田原アルノ(488話 - 1112話)", "ベン・ベックマン"],
+      ["三木眞一郎(1156話 -)", "ベン・ベックマン"],
     ],
   );
 });
@@ -64,8 +78,8 @@ test("does not split on separators inside parentheses", () => {
       "声 - 郷里大輔（151話）→斎藤志郎（劇場版『RED』、1109話 - ）",
     ),
     [
-      ["郷里大輔", "ロックスター"],
-      ["斎藤志郎", "ロックスター"],
+      ["郷里大輔(151話)", "ロックスター"],
+      ["斎藤志郎(劇場版『RED』、1109話 -)", "ロックスター"],
     ],
   );
 });
@@ -129,8 +143,8 @@ test("reads one actor line per character from several dd lines", () => {
       "声（ブロギー） - 稲田徹",
     ),
     [
-      ["郷里大輔", "ドリー"],
-      ["藤原貴弘", "ドリー"],
+      ["郷里大輔(71話 - 270話)", "ドリー"],
+      ["藤原貴弘(1109話 - 1112話)", "ドリー"],
       ["稲田徹", "ブロギー"],
     ],
   );

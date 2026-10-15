@@ -2,7 +2,7 @@
 //
 // Expected markup (Japanese Wikipedia): <dt>character</dt><dd>声 - actor</dd>,
 // where the actor text may carry notes and several actors:
-//   声 - A(幼少期)、B           an alias or age note in parentheses
+//   声 - A(幼少期)、B           a note in parentheses is kept on the actor's name
 //   声 - A(4話)→B(5話 - )       the actor changed over time
 //   声 - A(X)、B(Y)             parentheses name the character an actor plays
 
@@ -25,6 +25,8 @@ const BRACKETED_NOTE = /\[[^\]]*\]/g;
 const VOICE_LINE = /^\s*声\s*(?:\(([^)]*)\))?\s*[-–ー:：]\s*([\s\S]*)$/;
 // Parentheses holding only a reading, e.g. "五鬼(ゴーキ)".
 const READING = /\([\s぀-ヿ・ー]*\)/g;
+// A note with no letters (e.g. "1", " - ") says nothing worth keeping.
+const HAS_LETTER = /\p{L}/u;
 const NOT_A_NAME = /^(?:他|ほか|など)$/;
 const OPENERS = "(「『〈";
 const CLOSERS = ")」』〉";
@@ -114,7 +116,11 @@ function pair(charas: string[], line: string): CastEntry[] {
             : zip
               ? [charas[index] as string]
               : charas;
-      return targets.map((chara): CastEntry => [name, chara]);
+      const voice =
+        hinted.length === 0 && HAS_LETTER.test(note)
+          ? `${name}(${note})`
+          : name;
+      return targets.map((chara): CastEntry => [voice, chara]);
     }),
   );
 }
