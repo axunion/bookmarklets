@@ -40,6 +40,13 @@ const standardize = (text: string) =>
     .replace(/\s*\n\s*/g, " ")
     .trim();
 
+function nextDepth(depth: number, char: string): number {
+  if (OPENERS.includes(char)) {
+    return depth + 1;
+  }
+  return CLOSERS.includes(char) ? Math.max(0, depth - 1) : depth;
+}
+
 /** Splits on any of `separators`, ignoring those inside parentheses or quotes. */
 function splitTopLevel(text: string, separators: string): string[] {
   const parts: string[] = [];
@@ -47,18 +54,18 @@ function splitTopLevel(text: string, separators: string): string[] {
   let start = 0;
   for (let i = 0; i < text.length; i += 1) {
     const char = text.charAt(i);
-    if (OPENERS.includes(char)) {
-      depth += 1;
-    } else if (CLOSERS.includes(char)) {
-      depth = Math.max(0, depth - 1);
-    } else if (depth === 0 && separators.includes(char)) {
+    if (depth === 0 && separators.includes(char)) {
       parts.push(text.slice(start, i));
       start = i + 1;
     }
+    depth = nextDepth(depth, char);
   }
   parts.push(text.slice(start));
   return parts.map((part) => part.trim()).filter(Boolean);
 }
+
+/** True when an opener is never closed; splitTopLevel then stops splitting. */
+const hasUnclosedBracket = (text: string) => [...text].reduce(nextDepth, 0) > 0;
 
 function parseActor(text: string): Actor {
   const open = text.indexOf("(");
@@ -84,7 +91,8 @@ function parseActors(text: string): Actor[][] {
 }
 
 const refersTo = (hint: string, chara: string) =>
-  hint.length >= 2 && (chara.includes(hint) || hint.includes(chara));
+  hint.length >= 2 &&
+  (chara.includes(hint) || (chara.length >= 2 && hint.includes(chara)));
 
 function parseCharas(chara: string): string[] {
   return splitTopLevel(standardize(chara).replace(READING, ""), "、,，&＆/／");
@@ -127,16 +135,15 @@ function pair(charas: string[], line: string): CastEntry[] {
 
 /** Merges entries sharing a voice actor, joining their characters with ", ". */
 function mergeByVoice(entries: CastEntry[]): CastEntry[] {
-  const merged: CastEntry[] = [];
+  const byVoice = new Map<string, string[]>();
   for (const [voice, chara] of entries) {
-    const existing = merged.find(([v]) => v === voice);
-    if (!existing) {
-      merged.push([voice, chara]);
-    } else if (!existing[1].split(", ").includes(chara)) {
-      existing[1] += `, ${chara}`;
+    const charas = byVoice.get(voice) ?? [];
+    if (!charas.includes(chara)) {
+      charas.push(chara);
     }
+    byVoice.set(voice, charas);
   }
-  return merged;
+  return [...byVoice].map(([voice, charas]) => [voice, charas.join(", ")]);
 }
 
 // "キャラ(声 - 声優)" written inside running text; up to 16 chars of the character name.
@@ -164,10 +171,7 @@ export function extractCast(
 ): CastEntry[] {
   const primary = mergeByVoice(
     entries.flatMap(({ chara, lines }) => {
-      const charas = splitTopLevel(
-        standardize(chara).replace(READING, ""),
-        "、,，&＆/／",
-      );
+      const charas = parseCharas(chara);
       return lines.flatMap((line) => pair(charas, standardize(line)));
     }),
   );
@@ -191,10 +195,17 @@ export function findUnresolved(entries: RawEntry[]): string[] {
     const assigned = new Set<string>();
     const unresolved: string[] = [];
 
+    const label = standardize(chara);
+
+    if (voiceLines.length > 0) {
+      for (const text of [label, ...voiceLines].filter(hasUnclosedBracket)) {
+        unresolved.push(`${label} | unclosed bracket: ${text}`);
+      }
+    }
     for (const line of voiceLines) {
       const pairs = pair(charas, line);
       if (pairs.length === 0) {
-        unresolved.push(`${chara.trim()} | ${line}`);
+        unresolved.push(`${label} | ${line}`);
       }
       for (const [, name] of pairs) {
         assigned.add(name);

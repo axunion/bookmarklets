@@ -77,16 +77,15 @@ export function revealPanel(): boolean {
 }
 
 /**
- * Shows a new panel. `onBuild` turns the
- * edited text into the JSON string shown (and copied) when the user presses Build.
+ * Shows a new panel. `onBuild` turns the edited text into the JSON string shown
+ * (and copied) when the user presses Build. Call `revealPanel` first: an existing panel
+ * is not replaced here.
  */
 export function showPanel(options: {
   title: string;
   text: string;
   onBuild: (fields: { title: string; year: string; text: string }) => string;
 }): void {
-  document.getElementById(HOST_ID)?.remove();
-
   const host = el("div", { id: HOST_ID });
   const root = host.attachShadow({ mode: "open" });
 

@@ -173,6 +173,22 @@ test("merges characters played by the same actor without duplicates", () => {
   );
 });
 
+test("does not treat a note as a hint just because it contains a one-letter name", () => {
+  assert.deepEqual(cast("L、ミサ", "声 - 佐藤（Lサイズ）"), [
+    ["佐藤(Lサイズ)", "L, ミサ"],
+  ]);
+});
+
+test("merges characters whose names contain a comma", () => {
+  assert.deepEqual(
+    castOf([
+      { chara: "A(B, C)", lines: ["声 - 佐藤"] },
+      { chara: "C)", lines: ["声 - 佐藤"] },
+    ]),
+    [["佐藤", "A(B, C), C)"]],
+  );
+});
+
 test("normalizes full-width parentheses and spaces", () => {
   assert.deepEqual(cast("A（幼少期）", "声 - 山田　太郎"), [
     ["山田 太郎", "A(幼少期)"],
@@ -211,6 +227,16 @@ test("reports characters left without an actor", () => {
     ]),
     ["ベータ | no voice actor assigned"],
   );
+});
+
+test("reports a voice line or character with an unclosed bracket", () => {
+  assert.deepEqual(
+    findUnresolved([{ chara: "A", lines: ["声 - 佐藤（少年期、鈴木"] }]),
+    ["A | unclosed bracket: 声 - 佐藤(少年期、鈴木"],
+  );
+  assert.deepEqual(findUnresolved([{ chara: "A「B", lines: ["声 - 佐藤"] }]), [
+    "A「B | unclosed bracket: A「B",
+  ]);
 });
 
 test("reports nothing for entries without voice lines or fully assigned ones", () => {
