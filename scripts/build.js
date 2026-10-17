@@ -3,7 +3,8 @@ import { build } from "esbuild";
 
 const names = (await readdir("src", { withFileTypes: true }))
   .filter((entry) => entry.isDirectory())
-  .map((entry) => entry.name);
+  .map((entry) => entry.name)
+  .sort();
 
 await rm("dist", { recursive: true, force: true });
 await mkdir("dist");
