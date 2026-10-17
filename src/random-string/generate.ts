@@ -10,14 +10,17 @@ export type CharsetKey = keyof typeof CHARSETS;
 export const MIN_LENGTH = 1;
 export const MAX_LENGTH = 99;
 
+const buffer = new Uint32Array(1);
+
 /** Uniform integer in [0, max); rejects the biased tail of the 32-bit range. */
 export function randomIndex(max: number): number {
   const limit = 2 ** 32 - (2 ** 32 % max);
-  const buffer = new Uint32Array(1);
+  let value: number;
   do {
     crypto.getRandomValues(buffer);
-  } while ((buffer[0] as number) >= limit);
-  return (buffer[0] as number) % max;
+    value = buffer[0] as number;
+  } while (value >= limit);
+  return value % max;
 }
 
 /** Joins the selected character sets in a fixed order. */
