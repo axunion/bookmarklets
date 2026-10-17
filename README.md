@@ -34,3 +34,4 @@ Open the published page and drag a link to the browser's bookmarks bar, then cli
 | ---- | ----------- |
 | unlock-page | Lifts page restrictions on right-click, copy, cut, paste, text selection and drag |
 | extract-cast | Extracts voice actors and characters from an anime page into an editable table and copies them as JSON |
+| random-string | Shows a panel of random strings with selectable character sets and length; click a row to copy it |
