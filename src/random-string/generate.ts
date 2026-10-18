@@ -1,14 +1,9 @@
-export const CHARSETS = {
-  "0-9": "0123456789",
-  "A-Z": "ABCDEFGHIJKLMNOPQRSTUVWXYZ",
-  "a-z": "abcdefghijklmnopqrstuvwxyz",
-  "+-_@?": "+-_@?",
-} as const;
-
-export type CharsetKey = keyof typeof CHARSETS;
-
-export const MIN_LENGTH = 1;
-export const MAX_LENGTH = 99;
+const UPPER = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+const LOWER = "abcdefghijklmnopqrstuvwxyz";
+export const DIGITS = "0123456789";
+// Only characters that survive URL/form encoding and are accepted by most legacy systems.
+const SYMBOLS = "-_";
+const AMBIGUOUS = "0O1lI";
 
 const buffer = new Uint32Array(1);
 
@@ -23,18 +18,10 @@ export function randomIndex(max: number): number {
   return value % max;
 }
 
-/** Joins the selected character sets in a fixed order. */
-export function buildAlphabet(keys: readonly CharsetKey[]): string {
-  return (Object.keys(CHARSETS) as CharsetKey[])
-    .filter((key) => keys.includes(key))
-    .map((key) => CHARSETS[key])
-    .join("");
-}
-
-/** Out-of-range or non-integer lengths are clamped to 1-99. */
-export function clampLength(value: number): number {
-  if (!Number.isFinite(value)) return MIN_LENGTH;
-  return Math.min(MAX_LENGTH, Math.max(MIN_LENGTH, Math.trunc(value)));
+/** Out-of-range or non-integer values are clamped into [min, max]; NaN becomes min. */
+export function clamp(value: number, min: number, max: number): number {
+  if (!Number.isFinite(value)) return min;
+  return Math.min(max, Math.max(min, Math.trunc(value)));
 }
 
 export function generate(
@@ -48,4 +35,68 @@ export function generate(
     out += alphabet[pick(alphabet.length)];
   }
   return out;
+}
+
+export interface PasswordOptions {
+  symbols: boolean;
+  noAmbiguous: boolean;
+}
+
+function passwordClasses({ symbols, noAmbiguous }: PasswordOptions): string[] {
+  const classes = [UPPER, LOWER, DIGITS];
+  if (symbols) classes.push(SYMBOLS);
+  return classes.map((chars) =>
+    noAmbiguous
+      ? [...chars].filter((c) => !AMBIGUOUS.includes(c)).join("")
+      : chars,
+  );
+}
+
+/**
+ * Draws from all classes and retries until every class appears, which keeps the
+ * result uniform over the strings that satisfy the policy.
+ */
+export function generatePassword(
+  length: number,
+  options: PasswordOptions,
+  pick: (max: number) => number = randomIndex,
+): string {
+  const classes = passwordClasses(options);
+  const alphabet = classes.join("");
+  let out: string;
+  do {
+    out = generate(alphabet, length, pick);
+  } while (!classes.every((chars) => [...out].some((c) => chars.includes(c))));
+  return out;
+}
+
+/** Ignores the negligible loss from the retry in `generatePassword`. */
+export function passwordBits(length: number, options: PasswordOptions): number {
+  return length * Math.log2(passwordClasses(options).join("").length);
+}
+
+function tokenBody(caseSensitive: boolean): string {
+  return caseSensitive ? LOWER + UPPER + DIGITS : LOWER + DIGITS;
+}
+
+/**
+ * Token for hiding a URL. Starts with a lowercase letter because host labels,
+ * bucket names and CSS ids often reject a leading digit.
+ */
+export function generateToken(
+  length: number,
+  caseSensitive: boolean,
+  pick: (max: number) => number = randomIndex,
+): string {
+  return (
+    generate(LOWER, 1, pick) +
+    generate(tokenBody(caseSensitive), length - 1, pick)
+  );
+}
+
+export function tokenBits(length: number, caseSensitive: boolean): number {
+  return (
+    Math.log2(LOWER.length) +
+    (length - 1) * Math.log2(tokenBody(caseSensitive).length)
+  );
 }

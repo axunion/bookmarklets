@@ -1,17 +1,123 @@
-// Shows a small panel of random strings; click a row to copy it.
+// Shows a small panel of random passwords, passphrases or URL tokens; click a row to copy it.
 import {
-  buildAlphabet,
-  CHARSETS,
-  type CharsetKey,
-  clampLength,
-  generate,
-  MAX_LENGTH,
-  MIN_LENGTH,
+  clamp,
+  generatePassword,
+  generateToken,
+  passwordBits,
+  tokenBits,
 } from "./generate.ts";
+import { generatePassphrase, passphraseBits } from "./passphrase.ts";
 
 const HOST_ID = "bookmarklet-random-string";
 const ROWS = 8;
-const DEFAULT_LENGTH = 40;
+// Strength labels; the meter is full at METER_BITS.
+const WEAK_BITS = 64;
+const STRONG_BITS = 100;
+const METER_BITS = 128;
+
+type Mode = "password" | "passphrase" | "url";
+type Flags = Record<string, boolean>;
+
+interface ModeSpec {
+  label: string;
+  hint: string;
+  unit: string;
+  min: number;
+  max: number;
+  initial: number;
+  options: { key: string; label: string; note: string; checked: boolean }[];
+  plan(size: number, flags: Flags): { make(): string; bits: number };
+}
+
+const MODES: Record<Mode, ModeSpec> = {
+  password: {
+    label: "Password",
+    hint: "Letters and digits only, so it works on almost any site.",
+    unit: "Characters",
+    min: 12,
+    max: 99,
+    initial: 20,
+    options: [
+      {
+        key: "symbols",
+        label: "Add symbols",
+        note: "Only - and _ ; leave off for old systems",
+        checked: false,
+      },
+      {
+        key: "noAmbiguous",
+        label: "Avoid look-alikes",
+        note: "Skips 0 O 1 l I",
+        checked: false,
+      },
+    ],
+    plan: (size, flags) => {
+      const options = {
+        symbols: flags.symbols === true,
+        noAmbiguous: flags.noAmbiguous === true,
+      };
+      return {
+        make: () => generatePassword(size, options),
+        bits: passwordBits(size, options),
+      };
+    },
+  },
+  passphrase: {
+    label: "Passphrase",
+    hint: "Random words joined by hyphens. Easy to type and remember.",
+    unit: "Words",
+    min: 4,
+    max: 12,
+    initial: 7,
+    options: [
+      {
+        key: "capitalize",
+        label: "Capitalize words",
+        note: "For sites that require upper case",
+        checked: false,
+      },
+      {
+        key: "digit",
+        label: "Add a digit",
+        note: "For sites that require a number",
+        checked: false,
+      },
+    ],
+    plan: (size, flags) => {
+      const options = {
+        capitalize: flags.capitalize === true,
+        digit: flags.digit === true,
+      };
+      return {
+        make: () => generatePassphrase(size, options),
+        bits: passphraseBits(size, options),
+      };
+    },
+  },
+  url: {
+    label: "URL",
+    hint: "Lowercase letters and digits, safe in URLs, host names and file names.",
+    unit: "Characters",
+    min: 16,
+    max: 63,
+    initial: 26,
+    options: [
+      {
+        key: "upper",
+        label: "Allow upper case",
+        note: "Paths only; host names ignore case",
+        checked: false,
+      },
+    ],
+    plan: (size, flags) => {
+      const upper = flags.upper === true;
+      return {
+        make: () => generateToken(size, upper),
+        bits: tokenBits(size, upper),
+      };
+    },
+  },
+};
 
 const STYLE = `
   :host { all: initial; }
@@ -20,7 +126,7 @@ const STYLE = `
     --fg: #1d1d1f; --fg-sub: rgba(60, 60, 67, .6); --fg-inv: #fff;
     --glass: rgba(246, 246, 246, .72); --line: rgba(0, 0, 0, .1);
     --fill: rgba(120, 120, 128, .16); --fill-hover: rgba(120, 120, 128, .12); --fill-strong: rgba(120, 120, 128, .26);
-    --ring: rgba(0, 0, 0, .25);
+    --ring: rgba(0, 0, 0, .25); --weak: #d70015;
     position: fixed; top: 12px; right: 12px; z-index: 2147483647;
     width: min(480px, calc(100vw - 24px)); max-height: calc(100vh - 24px);
     display: flex; flex-direction: column; overflow: hidden;
@@ -35,45 +141,82 @@ const STYLE = `
       --fg: #f5f5f7; --fg-sub: rgba(235, 235, 245, .6); --fg-inv: #1d1d1f;
       --glass: rgba(44, 44, 46, .72); --line: rgba(255, 255, 255, .14);
       --fill: rgba(120, 120, 128, .36); --fill-hover: rgba(120, 120, 128, .24); --fill-strong: rgba(120, 120, 128, .5);
-      --ring: rgba(255, 255, 255, .35);
+      --ring: rgba(255, 255, 255, .35); --weak: #ff453a;
     }
   }
-  .bar {
-    display: flex; flex: none; gap: 6px; padding: 10px;
-    border-bottom: .5px solid var(--line);
+  button {
+    height: 32px; margin: 0; padding: 0 14px; border: 0; border-radius: 10px;
+    background: var(--fill); color: var(--fg); font: inherit; font-weight: 500;
+    cursor: pointer; transition: background .15s, opacity .15s;
   }
-  label.chip { flex: 1; min-width: 0; cursor: pointer; }
-  label.chip input { display: none; }
-  label.chip span {
-    display: block; height: 32px; padding: 0 4px; border-radius: 10px;
-    background: var(--fill); color: var(--fg-sub); line-height: 32px; text-align: center;
-    white-space: nowrap; user-select: none; transition: background .15s, color .15s;
+  button:hover { background: var(--fill-strong); }
+  button:active { opacity: .6; }
+  button:focus-visible { outline: 0; box-shadow: 0 0 0 3px var(--ring); }
+  button.round { width: 32px; padding: 0; border-radius: 50%; color: var(--fg-sub); }
+
+  .top { display: flex; flex: none; gap: 8px; padding: 12px 12px 0; }
+  .modes { display: flex; flex: 1; gap: 2px; padding: 2px; border-radius: 12px; background: var(--fill); }
+  .modes label { flex: 1; min-width: 0; cursor: pointer; }
+  .modes input { display: none; }
+  .modes span {
+    display: block; height: 32px; border-radius: 10px; color: var(--fg-sub);
+    line-height: 32px; text-align: center; font-weight: 500; user-select: none;
+    transition: background .15s, color .15s;
   }
-  label.chip input:checked + span { background: var(--fg); color: var(--fg-inv); }
+  .modes input:checked + span { background: var(--fg); color: var(--fg-inv); }
+  .hint { flex: none; margin: 0; padding: 10px 16px 8px; color: var(--fg-sub); }
+
+  .card {
+    flex: none; margin: 0 12px; border-radius: 12px; background: var(--fill-hover);
+    box-shadow: inset 0 0 0 .5px var(--line);
+  }
+  .card > * + *, .options > * { border-top: .5px solid var(--line); }
+  .options { display: contents; }
+  .setting {
+    display: flex; align-items: center; gap: 12px; min-height: 48px; padding: 8px 12px;
+  }
+  label.setting { cursor: pointer; }
+  .text { flex: 1; min-width: 0; }
+  .text b { display: block; font-weight: 500; }
+  .text small { display: block; margin-top: 1px; color: var(--fg-sub); font-size: 12px; }
+
+  .stepper { display: flex; align-items: center; gap: 4px; }
+  .stepper button { width: 32px; padding: 0; border-radius: 50%; font-size: 18px; line-height: 1; }
   .length {
-    width: 52px; height: 32px; padding: 0; margin: 0; appearance: textfield; border: 0; border-radius: 10px;
-    background: var(--fill); color: inherit; font: inherit; text-align: center;
+    width: 56px; height: 32px; padding: 0; margin: 0; appearance: textfield; border: 0; border-radius: 10px;
+    background: transparent; color: inherit; font: inherit; font-size: 15px; font-weight: 600; text-align: center;
   }
   .length::-webkit-inner-spin-button { appearance: none; margin: 0; }
   .length:focus { outline: 0; box-shadow: 0 0 0 3px var(--ring); }
-  button {
-    height: 32px; margin: 0; padding: 0 14px; border: 0; border-radius: 10px;
-    background: var(--fg); color: var(--fg-inv); font: inherit; font-weight: 500;
-    cursor: pointer; transition: opacity .15s, background .15s;
+
+  .setting input[type="checkbox"] { position: absolute; opacity: 0; pointer-events: none; }
+  .switch {
+    position: relative; flex: none; width: 42px; height: 26px; border-radius: 13px;
+    background: var(--fill-strong); transition: background .2s;
   }
-  button:hover { opacity: .8; }
-  button:active { opacity: .6; }
-  button:focus-visible { outline: 0; box-shadow: 0 0 0 3px var(--ring); }
-  button.close {
-    width: 32px; padding: 0; border-radius: 50%;
-    background: var(--fill); color: var(--fg-sub);
+  .switch::after {
+    content: ""; position: absolute; top: 2px; left: 2px; width: 22px; height: 22px; border-radius: 50%;
+    background: #fff; box-shadow: 0 1px 3px rgba(0, 0, 0, .3); transition: transform .2s;
   }
-  button.close:hover { opacity: 1; background: var(--fill-hover); color: var(--fg); }
-  .rows { margin: 0; padding: 6px; list-style: none; overflow-y: auto; }
+  input:checked + .switch { background: var(--fg); }
+  input:checked + .switch::after { transform: translateX(16px); }
+  input:focus-visible + .switch { box-shadow: 0 0 0 3px var(--ring); }
+
+  .strength { display: flex; align-items: center; gap: 12px; padding: 12px; }
+  .strength .name { flex: none; font-weight: 500; }
+  .meter { flex: 1; height: 6px; border-radius: 3px; background: var(--fill); overflow: hidden; }
+  .meter div { height: 100%; border-radius: 3px; background: var(--fg); transition: width .2s; }
+  .strength output { flex: none; min-width: 108px; text-align: right; font-variant-numeric: tabular-nums; }
+  .strength.weak .meter div { background: var(--weak); }
+  .strength.weak output { color: var(--weak); }
+
+  .results { display: flex; flex: none; align-items: center; justify-content: space-between; padding: 12px 16px 2px; color: var(--fg-sub); }
+  .results button { height: 28px; padding: 0 12px; }
+  .rows { margin: 0; padding: 6px 6px 8px; list-style: none; overflow-y: auto; }
   .row {
-    display: block; width: 100%; padding: 8px 12px; border-radius: 10px;
-    background: transparent; color: inherit; text-align: center;
-    word-break: break-all; font: 90%/1.3 ui-monospace, "SF Mono", Menlo, monospace;
+    display: block; width: 100%; height: auto; padding: 8px 12px; border-radius: 10px;
+    background: transparent; color: inherit; text-align: center; font-weight: 400;
+    overflow-wrap: anywhere; font: 90%/1.3 ui-monospace, "SF Mono", Menlo, monospace;
     transition: background .1s;
   }
   .row:hover { opacity: 1; background: var(--fill); }
@@ -82,7 +225,6 @@ const STYLE = `
   @keyframes copied {
     0%, 35% { background: color-mix(in srgb, var(--fg) 35%, transparent); }
   }
-  .empty { padding: 12px; text-align: center; color: var(--fg-sub); }
 `;
 
 type Child = Node | string;
@@ -105,41 +247,101 @@ if (existing) {
   const host = el("div", { id: HOST_ID });
   const root = host.attachShadow({ mode: "open" });
 
-  const keys = Object.keys(CHARSETS) as CharsetKey[];
-  const checks = keys.map((key) => ({
-    key,
-    input: el("input", {
-      type: "checkbox",
-      checked: key !== "+-_@?",
-      onchange: render,
-    }),
-  }));
+  const modes = Object.keys(MODES) as Mode[];
+  let mode: Mode = "password";
+  // Each mode remembers its own size and option flags across switches.
+  const sizes = Object.fromEntries(
+    modes.map((m) => [m, MODES[m].initial]),
+  ) as Record<Mode, number>;
+  const flags: Flags = {};
+  for (const m of modes) {
+    for (const { key, checked } of MODES[m].options) flags[key] = checked;
+  }
+
+  const hint = el("p", { className: "hint" });
+  const unit = el("b");
   const length = el("input", {
     className: "length",
     type: "number",
-    min: String(MIN_LENGTH),
-    max: String(MAX_LENGTH),
-    value: String(DEFAULT_LENGTH),
-    title: `${MIN_LENGTH}-${MAX_LENGTH}`,
     oninput: render,
     onchange: commit,
   });
+  const options = el("div", { className: "options" });
+  const meterFill = el("div");
+  const level = el("output");
+  const strength = el(
+    "div",
+    { className: "strength" },
+    el("span", { className: "name" }, "Strength"),
+    el("div", { className: "meter" }, meterFill),
+    level,
+  );
   const rows = el("ul", { className: "rows" });
 
-  function render() {
-    const alphabet = buildAlphabet(
-      checks.filter(({ input }) => input.checked).map(({ key }) => key),
+  function sizeOf() {
+    const { min, max } = MODES[mode];
+    return clamp(length.valueAsNumber, min, max);
+  }
+
+  function bump(delta: number) {
+    const { min, max } = MODES[mode];
+    length.value = String(clamp(sizeOf() + delta, min, max));
+    render();
+  }
+
+  function select(next: Mode) {
+    sizes[mode] = sizeOf();
+    mode = next;
+    sync();
+    render();
+  }
+
+  // Rebuilds everything that depends on the current mode.
+  function sync() {
+    const spec = MODES[mode];
+    hint.textContent = spec.hint;
+    unit.textContent = spec.unit;
+    length.min = String(spec.min);
+    length.max = String(spec.max);
+    length.value = String(sizes[mode]);
+    length.title = `${spec.min}-${spec.max}`;
+    options.replaceChildren(
+      ...spec.options.map(({ key, label, note }) => {
+        const input = el("input", {
+          type: "checkbox",
+          checked: flags[key],
+          onchange: () => {
+            flags[key] = input.checked;
+            render();
+          },
+        });
+        return el(
+          "label",
+          { className: "setting" },
+          el(
+            "span",
+            { className: "text" },
+            el("b", {}, label),
+            el("small", {}, note),
+          ),
+          input,
+          el("span", { className: "switch" }),
+        );
+      }),
     );
-    const size = clampLength(length.valueAsNumber);
-    if (alphabet === "") {
-      rows.replaceChildren(
-        el("li", { className: "empty" }, "Select at least one character set"),
-      );
-      return;
-    }
+  }
+
+  function render() {
+    const spec = MODES[mode];
+    const { make, bits } = spec.plan(sizeOf(), flags);
+    const weak = bits < WEAK_BITS;
+    const name = weak ? "Weak" : bits < STRONG_BITS ? "Good" : "Strong";
+    level.textContent = `${Math.floor(bits)} bit · ${name}`;
+    meterFill.style.width = `${Math.min(100, (bits / METER_BITS) * 100)}%`;
+    strength.classList.toggle("weak", weak);
     rows.replaceChildren(
       ...Array.from({ length: ROWS }, () => {
-        const text = generate(alphabet, size);
+        const text = make();
         const row = el("button", { className: "row", textContent: text });
         row.onanimationend = () => row.classList.remove("copied");
         row.onclick = () => {
@@ -159,9 +361,9 @@ if (existing) {
     );
   }
 
-  // Shows the length actually used; not done on input so the field can be emptied while typing.
+  // Shows the size actually used; not done on input so the field can be emptied while typing.
   function commit() {
-    length.value = String(clampLength(length.valueAsNumber));
+    length.value = String(sizeOf());
     render();
   }
 
@@ -170,18 +372,63 @@ if (existing) {
     { className: "panel" },
     el(
       "div",
-      { className: "bar" },
-      ...checks.map(({ key, input }) =>
-        el("label", { className: "chip" }, input, el("span", {}, key)),
+      { className: "top" },
+      el(
+        "div",
+        { className: "modes" },
+        ...modes.map((m) =>
+          el(
+            "label",
+            {},
+            el("input", {
+              type: "radio",
+              name: "mode",
+              checked: m === mode,
+              onchange: () => select(m),
+            }),
+            el("span", {}, MODES[m].label),
+          ),
+        ),
       ),
-      length,
-      el("button", { textContent: "Generate", onclick: render }),
       el("button", {
-        className: "close",
+        className: "round",
         title: "Close",
         textContent: "✕",
         onclick: () => host.remove(),
       }),
+    ),
+    hint,
+    el(
+      "div",
+      { className: "card" },
+      el(
+        "div",
+        { className: "setting" },
+        el("span", { className: "text" }, unit),
+        el(
+          "div",
+          { className: "stepper" },
+          el("button", {
+            textContent: "−",
+            title: "Decrease",
+            onclick: () => bump(-1),
+          }),
+          length,
+          el("button", {
+            textContent: "+",
+            title: "Increase",
+            onclick: () => bump(1),
+          }),
+        ),
+      ),
+      options,
+      strength,
+    ),
+    el(
+      "div",
+      { className: "results" },
+      "Click a row to copy",
+      el("button", { textContent: "↻ Regenerate", onclick: render }),
     ),
     rows,
   );
@@ -198,5 +445,6 @@ if (existing) {
 
   root.append(el("style", { textContent: STYLE }), panel);
   document.body.append(host);
+  sync();
   render();
 }
