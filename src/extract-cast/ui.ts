@@ -1,58 +1,89 @@
 const HOST_ID = "bookmarklet-extract-cast";
 
+// The toolbar is frosted glass; the text areas sit on a more opaque inner surface
+// and use full-contrast text so the page behind never hurts readability.
 const STYLE = `
-  :host { all: initial; }
+  :host {
+    all: initial;
+    --fg: #1d1d1f; --fg-sub: rgba(60, 60, 67, .6); --fg-inv: #fff;
+    --glass: rgba(246, 246, 246, .8); --line: rgba(0, 0, 0, .1); --surface: rgba(255, 255, 255, .65);
+    --fill: rgba(120, 120, 128, .16); --field: rgba(120, 120, 128, .12); --fill-strong: rgba(120, 120, 128, .26);
+    --ring: rgba(0, 0, 0, .25); --text: #000;
+  }
   * { box-sizing: border-box; }
-  :focus { outline: none; }
   .panel {
-    position: fixed; top: 0; right: 0; bottom: 0; z-index: 2147483647;
-    display: flex; flex-direction: column; width: min(480px, 100vw);
-    background: rgba(255, 255, 255, .78); color: #2b2d2f; box-shadow: 0 0 12px rgba(0, 0, 0, .4);
-    backdrop-filter: blur(6px);
-    font: 14px/1.4 system-ui, sans-serif;
+    position: fixed; top: 12px; right: 12px; bottom: 12px; z-index: 2147483647;
+    display: flex; flex-direction: column; overflow: hidden; width: min(560px, calc(100vw - 24px));
+    color: var(--fg); border-radius: 18px;
+    -webkit-backdrop-filter: blur(16px) saturate(180%); backdrop-filter: blur(16px) saturate(180%);
+    box-shadow: 0 0 0 .5px var(--line), 0 12px 40px rgba(0, 0, 0, .28), 0 2px 6px rgba(0, 0, 0, .12);
+    font: 13px/1.3 -apple-system, BlinkMacSystemFont, "SF Pro Text", system-ui, sans-serif;
+    -webkit-font-smoothing: antialiased;
     transition: transform .2s ease, opacity .2s ease;
+  }
+  @media (prefers-color-scheme: dark) {
+    :host {
+      --fg: #f5f5f7; --fg-sub: rgba(235, 235, 245, .6); --fg-inv: #1d1d1f;
+      --glass: rgba(44, 44, 46, .8); --line: rgba(255, 255, 255, .14); --surface: rgba(60, 60, 64, .7);
+      --fill: rgba(120, 120, 128, .36); --field: rgba(120, 120, 128, .24); --fill-strong: rgba(120, 120, 128, .5);
+      --ring: rgba(255, 255, 255, .35); --text: #fff;
+    }
   }
   .panel.folded {
     transform: translateX(24px); opacity: 0; visibility: hidden; pointer-events: none;
     transition: transform .2s ease, opacity .2s ease, visibility 0s .2s;
   }
-  .bar { display: flex; gap: 6px; padding: 6px; background: rgba(235, 237, 238, .7); }
-  .bar .fields { display: flex; flex: 1; gap: 2px; min-width: 0; }
-  .bar .title { flex: 1; min-width: 0; }
-  .bar .year { width: 4em; }
-  input, textarea {
-    border: 1px solid #c5c6c7; border-radius: 6px; background: #fff;
-    font: inherit; color: inherit;
-  }
-  input { min-height: 32px; padding: 0 8px; }
-  textarea {
-    flex: 1; margin: 0; padding: 8px; resize: none; border-width: 0; background: transparent;
-    font: 13px/1.6 ui-monospace, "SF Mono", Menlo, monospace;
-  }
+
   button {
-    display: flex; align-items: center; justify-content: center; width: 32px; height: 32px;
-    padding: 0; border: 1px solid #c5c6c7; border-radius: 6px; background: #fff;
-    color: inherit; font: inherit; cursor: pointer;
+    height: 32px; margin: 0; padding: 0 16px; border: 0; border-radius: 10px;
+    background: var(--fill); color: var(--fg); font: inherit; font-weight: 500;
+    cursor: pointer; transition: background .15s, opacity .15s;
   }
+  button:hover { background: var(--fill-strong); }
+  button:active { opacity: .6; }
+  button:focus-visible, input:focus-visible { outline: 0; box-shadow: 0 0 0 3px var(--ring); }
+  button.action { flex: none; width: 64px; padding: 0; }
+  button.primary { background: var(--fg); color: var(--fg-inv); }
+  button.primary:hover { background: var(--fg); opacity: .85; }
+  button.primary:active { opacity: .7; }
+  button.round { display: flex; align-items: center; justify-content: center; width: 32px; padding: 0; border-radius: 50%; color: var(--fg-sub); }
   svg {
-    width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 2;
+    width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 2.4;
     stroke-linecap: round; stroke-linejoin: round;
   }
-  button.primary { border-color: #2b8fc4; background: #2b8fc4; color: #fff; }
-  .tab {
-    position: fixed; top: 6px; right: 6px; z-index: 2147483647;
-    border-color: transparent; background: rgba(43, 45, 47, .35); color: #fff;
-    opacity: 0; visibility: hidden; transition: opacity .2s ease, visibility 0s .2s, background .15s;
+
+  .bar { display: flex; flex: none; align-items: center; gap: 8px; padding: 10px; background: var(--glass); }
+  .bar input {
+    min-width: 0; height: 32px; margin: 0; padding: 0 10px; border: 0; border-radius: 10px;
+    background: var(--field); color: inherit; font: inherit; font-size: 14px;
+    box-shadow: inset 0 0 0 .5px var(--line);
   }
-  .tab:hover { background: rgba(43, 45, 47, .6); }
-  .tab.visible { opacity: 1; visibility: visible; transition: opacity .2s ease .1s, background .15s; }
+  .bar input::placeholder { color: var(--fg-sub); }
+  .bar .title { flex: 1; }
+  .bar .year { width: 4.5em; text-align: center; }
+
+  .sheet {
+    display: flex; flex: 1; min-height: 0; overflow: hidden;
+    border-top: .5px solid var(--line); background: var(--surface);
+  }
+  textarea {
+    flex: 1; margin: 0; padding: 12px; resize: none; border: 0; outline: 0; background: transparent;
+    color: var(--text); font: 500 13px/1.6 ui-monospace, "SF Mono", Menlo, monospace;
+    caret-color: var(--text);
+  }
+  ::selection { background: color-mix(in srgb, var(--fg) 25%, transparent); }
+
+  button.tab {
+    position: fixed; top: 12px; right: 12px; z-index: 2147483647; width: 36px; height: 36px;
+    background: var(--glass); color: var(--fg);
+    -webkit-backdrop-filter: blur(16px) saturate(180%); backdrop-filter: blur(16px) saturate(180%);
+    box-shadow: 0 0 0 .5px var(--line), 0 4px 16px rgba(0, 0, 0, .22);
+    opacity: 0; visibility: hidden; transition: opacity .2s ease, visibility 0s .2s;
+  }
+  button.tab:hover { background: var(--glass); box-shadow: 0 0 0 .5px var(--line), 0 6px 20px rgba(0, 0, 0, .3); }
+  button.tab.visible { opacity: 1; visibility: visible; transition: opacity .2s ease .1s; }
   [hidden] { display: none !important; }
 `;
-
-const ICON_BUILD =
-  '<svg viewBox="0 0 24 24"><path d="M9 4C7 4 6 5 6 7v3c0 1-1 2-2 2 1 0 2 1 2 2v3c0 2 1 3 3 3M15 4c2 0 3 1 3 3v3c0 1 1 2 2 2-1 0-2 1-2 2v3c0 2-1 3-3 3"/></svg>';
-const ICON_EDIT =
-  '<svg viewBox="0 0 24 24"><path d="M4 20l1-5L16 4l4 4L9 19z"/></svg>';
 
 const ICON_HIDE = '<svg viewBox="0 0 24 24"><path d="M9 5l7 7-7 7"/></svg>';
 const ICON_SHOW = '<svg viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7"/></svg>';
@@ -98,17 +129,17 @@ export function showPanel(options: {
     className: "year",
     placeholder: "Year",
     maxLength: 4,
+    inputMode: "numeric",
   });
   const edit = el("textarea", { value: options.text, spellcheck: false });
   const result = el("textarea", { readOnly: true, hidden: true });
   const build = el("button", {
-    className: "primary",
-    title: "Build",
-    innerHTML: ICON_BUILD,
+    className: "action primary",
+    textContent: "Build",
   });
   const back = el("button", {
-    title: "Edit",
-    innerHTML: ICON_EDIT,
+    className: "action",
+    textContent: "Edit",
     hidden: true,
   });
 
@@ -141,18 +172,19 @@ export function showPanel(options: {
       { className: "bar" },
       build,
       back,
-      el("div", { className: "fields" }, title, year),
+      title,
+      year,
       el("button", {
+        className: "round",
         title: "Hide",
         innerHTML: ICON_HIDE,
         onclick: () => fold(true),
       }),
     ),
-    edit,
-    result,
+    el("div", { className: "sheet" }, edit, result),
   );
   const tab = el("button", {
-    className: "tab",
+    className: "round tab",
     title: "Show",
     innerHTML: ICON_SHOW,
     onclick: () => fold(false),
@@ -164,7 +196,12 @@ export function showPanel(options: {
     tab.classList.toggle("visible", folded);
   };
   host.addEventListener("reveal", () => fold(false));
+  // Keep typing from reaching the page's own shortcuts.
+  for (const type of ["keyup", "keypress"]) {
+    panel.addEventListener(type, (event) => event.stopPropagation());
+  }
   panel.onkeydown = (event) => {
+    event.stopPropagation();
     if (event.key === "Escape") fold(true);
   };
 
