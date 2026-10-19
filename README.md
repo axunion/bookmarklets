@@ -33,5 +33,6 @@ Open the published page and drag a link to the browser's bookmarks bar, then cli
 | Name | Description |
 | ---- | ----------- |
 | extract-cast | Extracts voice actors and characters from an anime page into an editable table and copies them as JSON |
+| qr-code | Shows a QR code for the selected text, or the page URL when nothing is selected; the text stays editable and the code can be saved as a PNG |
 | random-string | Shows a panel of random passwords, BIP39 passphrases or URL-safe tokens with an entropy estimate; click a row to copy it |
 | unlock-page | Lifts page restrictions on right-click, copy, cut, paste, text selection and drag |
