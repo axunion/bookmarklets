@@ -32,6 +32,7 @@ Open the published page and drag a link to the browser's bookmarks bar, then cli
 
 | Name | Description |
 | ---- | ----------- |
+| book-search | Shows 世田谷区立図書館 (all-field search, so authors match too) and Kindle store search links for the selected text; selecting other text retargets the search and the title stays editable |
 | extract-cast | Extracts voice actors and characters from an anime page into an editable table and copies them as JSON |
 | qr-code | Shows a QR code for the selected text, or the page URL when nothing is selected; the text stays editable and the code can be saved as a PNG |
 | random-string | Shows a panel of random passwords, BIP39 passphrases or URL-safe tokens with an entropy estimate; click a row to copy it |
