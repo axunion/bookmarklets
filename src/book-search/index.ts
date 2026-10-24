@@ -9,10 +9,11 @@ const STYLE = `
   :host { all: initial; }
   * { box-sizing: border-box; }
   .panel {
-    --fg: #1d1d1f; --fg-sub: rgba(60, 60, 67, .6);
-    --glass: rgba(246, 246, 246, .72); --line: rgba(0, 0, 0, .1);
-    --fill: rgba(120, 120, 128, .16); --fill-hover: rgba(120, 120, 128, .12); --fill-strong: rgba(120, 120, 128, .26);
-    --ring: rgba(0, 0, 0, .25); --card: rgba(255, 255, 255, .7);
+    color-scheme: light dark;
+    --fg: light-dark(#1d1d1f, #f5f5f7); --fg-sub: light-dark(rgba(60, 60, 67, .6), rgba(235, 235, 245, .6));
+    --glass: light-dark(rgba(246, 246, 246, .72), rgba(44, 44, 46, .72)); --line: light-dark(rgba(0, 0, 0, .1), rgba(255, 255, 255, .14));
+    --fill: light-dark(rgba(120, 120, 128, .16), rgba(120, 120, 128, .36)); --fill-hover: light-dark(rgba(120, 120, 128, .12), rgba(120, 120, 128, .24)); --fill-strong: light-dark(rgba(120, 120, 128, .26), rgba(120, 120, 128, .5));
+    --ring: light-dark(rgba(0, 0, 0, .25), rgba(255, 255, 255, .35)); --card: light-dark(rgba(255, 255, 255, .7), rgba(255, 255, 255, .14));
     position: fixed; top: 12px; right: 12px; z-index: 2147483647;
     width: min(360px, calc(100vw - 24px)); max-height: calc(100vh - 24px);
     display: flex; flex-direction: column; overflow-y: auto;
@@ -22,14 +23,8 @@ const STYLE = `
     font: 13px/1.3 -apple-system, BlinkMacSystemFont, "SF Pro Text", system-ui, sans-serif;
     -webkit-font-smoothing: antialiased;
   }
-  @media (prefers-color-scheme: dark) {
-    .panel {
-      --fg: #f5f5f7; --fg-sub: rgba(235, 235, 245, .6);
-      --glass: rgba(44, 44, 46, .72); --line: rgba(255, 255, 255, .14);
-      --fill: rgba(120, 120, 128, .36); --fill-hover: rgba(120, 120, 128, .24); --fill-strong: rgba(120, 120, 128, .5);
-      --ring: rgba(255, 255, 255, .35); --card: rgba(255, 255, 255, .14);
-    }
-  }
+  :host([data-theme="light"]) .panel { color-scheme: light; }
+  :host([data-theme="dark"]) .panel { color-scheme: dark; }
   button {
     width: 32px; height: 32px; margin: 0; padding: 0; border: 0; border-radius: 50%;
     background: var(--fill); color: var(--fg-sub); font: inherit; font-weight: 500;
@@ -83,6 +78,8 @@ if (existing) {
 } else {
   const host = el("div", { id: HOST_ID });
   const root = host.attachShadow({ mode: "open" });
+  const theme = document.documentElement.dataset.theme;
+  if (theme) host.dataset.theme = theme;
 
   const input = el("textarea", {
     value: cleanTitle(selectedText()),

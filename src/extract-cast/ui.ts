@@ -5,11 +5,14 @@ const HOST_ID = "bookmarklet-extract-cast";
 const STYLE = `
   :host {
     all: initial;
-    --fg: #1d1d1f; --fg-sub: rgba(60, 60, 67, .6); --fg-inv: #fff;
-    --glass: rgba(246, 246, 246, .8); --line: rgba(0, 0, 0, .1); --surface: rgba(255, 255, 255, .65);
-    --fill: rgba(120, 120, 128, .16); --field: rgba(120, 120, 128, .12); --fill-strong: rgba(120, 120, 128, .26);
-    --ring: rgba(0, 0, 0, .25); --text: #000;
+    color-scheme: light dark;
+    --fg: light-dark(#1d1d1f, #f5f5f7); --fg-sub: light-dark(rgba(60, 60, 67, .6), rgba(235, 235, 245, .6)); --fg-inv: light-dark(#fff, #1d1d1f);
+    --glass: light-dark(rgba(246, 246, 246, .8), rgba(44, 44, 46, .8)); --line: light-dark(rgba(0, 0, 0, .1), rgba(255, 255, 255, .14)); --surface: light-dark(rgba(255, 255, 255, .65), rgba(60, 60, 64, .7));
+    --fill: light-dark(rgba(120, 120, 128, .16), rgba(120, 120, 128, .36)); --field: light-dark(rgba(120, 120, 128, .12), rgba(120, 120, 128, .24)); --fill-strong: light-dark(rgba(120, 120, 128, .26), rgba(120, 120, 128, .5));
+    --ring: light-dark(rgba(0, 0, 0, .25), rgba(255, 255, 255, .35)); --text: light-dark(#000, #fff);
   }
+  :host([data-theme="light"]) { color-scheme: light; }
+  :host([data-theme="dark"]) { color-scheme: dark; }
   * { box-sizing: border-box; }
   .panel {
     position: fixed; top: 12px; right: 12px; bottom: 12px; z-index: 2147483647;
@@ -20,14 +23,6 @@ const STYLE = `
     font: 13px/1.3 -apple-system, BlinkMacSystemFont, "SF Pro Text", system-ui, sans-serif;
     -webkit-font-smoothing: antialiased;
     transition: transform .2s ease, opacity .2s ease;
-  }
-  @media (prefers-color-scheme: dark) {
-    :host {
-      --fg: #f5f5f7; --fg-sub: rgba(235, 235, 245, .6); --fg-inv: #1d1d1f;
-      --glass: rgba(44, 44, 46, .8); --line: rgba(255, 255, 255, .14); --surface: rgba(60, 60, 64, .7);
-      --fill: rgba(120, 120, 128, .36); --field: rgba(120, 120, 128, .24); --fill-strong: rgba(120, 120, 128, .5);
-      --ring: rgba(255, 255, 255, .35); --text: #fff;
-    }
   }
   .panel.folded {
     transform: translateX(24px); opacity: 0; visibility: hidden; pointer-events: none;
@@ -119,6 +114,8 @@ export function showPanel(options: {
 }): void {
   const host = el("div", { id: HOST_ID });
   const root = host.attachShadow({ mode: "open" });
+  const theme = document.documentElement.dataset.theme;
+  if (theme) host.dataset.theme = theme;
 
   const title = el("input", {
     className: "title",

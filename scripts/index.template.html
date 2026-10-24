@@ -4,14 +4,37 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="robots" content="noindex">
+  <meta name="color-scheme" content="light dark">
   <title>Bookmarklets</title>
+  <script>
+    try {
+      const theme = localStorage.getItem("theme");
+      if (theme === "light" || theme === "dark") document.documentElement.dataset.theme = theme;
+    } catch {}
+  </script>
   <style>
     :root {
-      --bg: #f5f6f7;
-      --fg: #2b2d2f;
-      --surface: #fff;
-      --border: #d5d8db;
-      --accent: #2b8fc4;
+      color-scheme: light dark;
+      --bg-from: light-dark(#f4f5f8, #1c1c1e);
+      --bg-to: light-dark(#dcdfe6, #0a0a0c);
+      --fg: light-dark(#1d1d1f, #f5f5f7);
+      --fg-sub: light-dark(rgba(60, 60, 67, .6), rgba(235, 235, 245, .6));
+      --fg-inv: light-dark(#fff, #1d1d1f);
+      --glass: light-dark(rgba(246, 246, 246, .72), rgba(44, 44, 46, .72));
+      --line: light-dark(rgba(0, 0, 0, .1), rgba(255, 255, 255, .14));
+      --fill: light-dark(rgba(120, 120, 128, .16), rgba(120, 120, 128, .36));
+      --fill-hover: light-dark(rgba(120, 120, 128, .12), rgba(120, 120, 128, .24));
+      --fill-strong: light-dark(rgba(120, 120, 128, .26), rgba(120, 120, 128, .5));
+      --ring: light-dark(rgba(0, 0, 0, .25), rgba(255, 255, 255, .35));
+      --shadow: light-dark(rgba(0, 0, 0, .06), rgba(0, 0, 0, .3));
+    }
+
+    :root[data-theme="light"] {
+      color-scheme: light;
+    }
+
+    :root[data-theme="dark"] {
+      color-scheme: dark;
     }
 
     * {
@@ -22,9 +45,10 @@
       margin: 0;
       min-height: 100vh;
       padding: 48px 16px;
-      background: var(--bg);
+      background: linear-gradient(160deg, var(--bg-from), var(--bg-to)) fixed;
       color: var(--fg);
-      font: 16px/1.5 system-ui, sans-serif;
+      font: 13px/1.3 -apple-system, BlinkMacSystemFont, "SF Pro Text", system-ui, sans-serif;
+      -webkit-font-smoothing: antialiased;
       -webkit-text-size-adjust: 100%;
     }
 
@@ -33,15 +57,72 @@
       margin: 0 auto;
     }
 
+    header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      margin: 0 4px 8px;
+    }
+
     h1 {
-      margin: 0 0 32px;
+      margin: 0;
       font-size: 1.5rem;
       font-weight: 600;
+      letter-spacing: -.01em;
+    }
+
+    .hint {
+      margin: 0 4px 24px;
+      color: var(--fg-sub);
+    }
+
+    .theme {
+      display: flex;
+      min-width: 0;
+      margin: 0;
+      padding: 2px;
+      border: 0;
+      border-radius: 10px;
+      background: var(--fill);
+    }
+
+    .theme button {
+      height: 28px;
+      margin: 0;
+      padding: 0 12px;
+      border: 0;
+      border-radius: 8px;
+      background: none;
+      color: var(--fg);
+      font: inherit;
+      font-weight: 500;
+      cursor: pointer;
+      transition: background-color 0.15s, color 0.15s, opacity 0.1s;
+    }
+
+    .theme button:hover {
+      background: var(--fill-hover);
+    }
+
+    .theme button:active {
+      opacity: .6;
+    }
+
+    .theme button[aria-pressed="true"] {
+      background: var(--fg);
+      color: var(--fg-inv);
+    }
+
+    button:focus-visible,
+    a:focus-visible {
+      outline: none;
+      box-shadow: 0 0 0 3px var(--ring);
     }
 
     ul {
       display: grid;
-      gap: 12px;
+      gap: 8px;
       margin: 0;
       padding: 0;
       list-style: none;
@@ -50,34 +131,88 @@
     a {
       display: flex;
       align-items: center;
+      justify-content: space-between;
       min-height: 56px;
       padding: 0 20px;
-      border: 1px solid var(--border);
-      border-radius: 12px;
-      background: var(--surface);
+      border-radius: 18px;
+      background: var(--glass);
+      box-shadow: 0 0 0 .5px var(--line), 0 4px 16px var(--shadow);
+      -webkit-backdrop-filter: blur(40px) saturate(180%);
+      backdrop-filter: blur(40px) saturate(180%);
       color: inherit;
       font-family: ui-monospace, "SF Mono", Menlo, monospace;
+      font-size: 14px;
       text-decoration: none;
-      transition: border-color 0.15s, transform 0.15s;
+      transition: background-color 0.15s, opacity 0.1s, transform 0.1s;
     }
 
-    a:hover,
-    a:focus-visible {
-      border-color: var(--accent);
-      outline: none;
+    a::after {
+      content: "";
+      width: 7px;
+      height: 7px;
+      border: solid var(--fg-sub);
+      border-width: 1.5px 1.5px 0 0;
+      transform: rotate(45deg);
+    }
+
+    a:hover {
+      background-image: linear-gradient(var(--fill-hover), var(--fill-hover));
     }
 
     a:active {
-      transform: scale(0.98);
+      background-image: linear-gradient(var(--fill-strong), var(--fill-strong));
+      opacity: .6;
+      transform: scale(0.99);
+    }
+
+    a:focus-visible {
+      box-shadow: 0 0 0 .5px var(--line), 0 0 0 3px var(--ring);
     }
   </style>
 </head>
 <body>
   <main>
-    <h1>Bookmarklets</h1>
+    <header>
+      <h1>Bookmarklets</h1>
+      <fieldset class="theme">
+        <legend hidden>Theme</legend>
+        <button type="button" data-theme-choice="">Auto</button>
+        <button type="button" data-theme-choice="light">Light</button>
+        <button type="button" data-theme-choice="dark">Dark</button>
+      </fieldset>
+    </header>
+    <p class="hint">Drag a link to the bookmarks bar, or click it to try the panel here.</p>
     <ul>
 {{links}}
     </ul>
   </main>
+  <script>
+    const root = document.documentElement;
+    const buttons = document.querySelectorAll("[data-theme-choice]");
+
+    // Panels read the theme once when they open, so open ones are updated here.
+    function setTheme(theme) {
+      const hosts = [root, ...document.querySelectorAll('[id^="bookmarklet-"]')];
+      for (const host of hosts) {
+        if (theme) host.dataset.theme = theme;
+        else delete host.dataset.theme;
+      }
+      for (const button of buttons) {
+        button.setAttribute("aria-pressed", String(button.dataset.themeChoice === theme));
+      }
+    }
+
+    for (const button of buttons) {
+      button.addEventListener("click", () => {
+        const theme = button.dataset.themeChoice;
+        setTheme(theme);
+        try {
+          if (theme) localStorage.setItem("theme", theme);
+          else localStorage.removeItem("theme");
+        } catch {}
+      });
+    }
+    setTheme(root.dataset.theme ?? "");
+  </script>
 </body>
 </html>

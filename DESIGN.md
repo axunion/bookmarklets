@@ -1,6 +1,6 @@
 # Design
 
-Baseline for the panel UI of bookmarklets under `src/`. It is a guideline, not a spec: each bookmarklet keeps its own CSS string and may deviate where its purpose calls for it (for example a different palette or layout). The index page is out of scope; see CLAUDE.md.
+Baseline for the panel UI of bookmarklets under `src/` and for the index page (`scripts/index.template.html`). It is a guideline, not a spec: each bookmarklet keeps its own CSS string and may deviate where its purpose calls for it (for example a different palette or layout).
 
 The look is macOS-style frosted glass that follows the system light/dark setting. This document is the source of truth: when a bookmarklet differs from it, either the bookmarklet has a reason to or the document is updated.
 
@@ -11,7 +11,8 @@ These protect the host page and the user's expectations, so deviate only with a 
 - **Isolation**: mount the panel in a Shadow DOM (`attachShadow({ mode: "open" })`) on a host element with id `bookmarklet-<name>`, and start the stylesheet with `:host { all: initial; }`. Page CSS must not leak in, and panel CSS must not leak out.
 - **Placement**: `position: fixed` at the top right (`top: 12px; right: 12px`) with `z-index: 2147483647`. Size is `min(<width>, calc(100vw - 24px))` and `max-height: calc(100vh - 24px)` so it fits small viewports.
 - **Single instance**: running the bookmarklet while its panel exists never creates a second one. Closing a panel removes its host; a panel that holds work in progress may fold instead and be revealed by the next run.
-- **Light and dark**: define every color as a custom property and override them under `prefers-color-scheme: dark`. Never hardcode a color in a rule.
+- **Light and dark**: define every color as a custom property whose value is `light-dark(<light>, <dark>)`, with `color-scheme: light dark` on the panel, so it follows the system setting. Never hardcode a color in a rule.
+- **Theme override**: the index page lets the user force a theme by setting `data-theme="light"` or `"dark"` on `<html>`. A panel copies that attribute to its host element when it mounts (`const theme = document.documentElement.dataset.theme; if (theme) host.dataset.theme = theme;`) and sets `color-scheme` from `:host([data-theme="light"])` / `:host([data-theme="dark"])`. The index page also updates the attribute on open hosts when the user switches. Pages without the attribute are unaffected.
 - **No external resources**: system fonts and inline SVG icons only.
 
 ## Default look
