@@ -1,5 +1,6 @@
 // Shows a panel that turns text into a QR code. The text starts as the page's selection,
 // or the page URL when nothing is selected, and can be edited.
+import { el } from "../dom.ts";
 import { encodeBytes, MAX_BYTES, type Matrix } from "./qr.ts";
 
 const HOST_ID = "bookmarklet-qr-code";
@@ -102,18 +103,6 @@ function savePng(modules: Matrix) {
   }, "image/png");
 }
 
-type Child = Node | string;
-
-function el<K extends keyof HTMLElementTagNameMap>(
-  tag: K,
-  props: Partial<HTMLElementTagNameMap[K]> & { className?: string } = {},
-  ...children: Child[]
-): HTMLElementTagNameMap[K] {
-  const node = Object.assign(document.createElement(tag), props);
-  node.append(...children);
-  return node;
-}
-
 // Running again while the panel is open closes it.
 const existing = document.getElementById(HOST_ID);
 if (existing) {
@@ -148,11 +137,12 @@ if (existing) {
   const frame = el("div", { className: "frame" });
   frame.append(svg);
   const status = el("span", { className: "status" });
-  // Disabled unless the text fits, so the click handler can always encode it.
+  // The matrix for the current text; null while the text is empty or too long.
+  let current: Matrix | null = null;
   const save = el("button", {
     className: "save",
     title: "Save as PNG",
-    onclick: () => savePng(encodeBytes(new TextEncoder().encode(input.value))),
+    onclick: () => current && savePng(current),
   });
   save.setAttribute("aria-label", "Save as PNG");
   save.append(downloadIcon());
@@ -160,17 +150,18 @@ if (existing) {
   function render() {
     const data = new TextEncoder().encode(input.value);
     const fits = data.length > 0 && data.length <= MAX_BYTES;
-    frame.hidden = !fits;
-    save.disabled = !fits;
+    current = fits ? encodeBytes(data) : null;
+    frame.hidden = !current;
+    save.disabled = !current;
     status.classList.toggle("error", data.length > MAX_BYTES);
-    if (!fits) {
+    if (!current) {
       status.textContent =
         data.length === 0
           ? "Enter some text"
           : `Too long: ${data.length} of ${MAX_BYTES} bytes`;
       return;
     }
-    const modules = encodeBytes(data);
+    const modules = current;
     const size = modules.length;
     const edge = size + QUIET_ZONE * 2;
     svg.setAttribute(

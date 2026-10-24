@@ -188,19 +188,18 @@ export function extractCast(
  */
 export function findUnresolved(entries: RawEntry[]): string[] {
   return entries.flatMap(({ chara, lines }) => {
-    const charas = parseCharas(chara);
     const voiceLines = lines
       .map(standardize)
       .filter((line) => VOICE_LINE.test(line));
+    if (voiceLines.length === 0) return [];
+
+    const charas = parseCharas(chara);
+    const label = standardize(chara);
     const assigned = new Set<string>();
     const unresolved: string[] = [];
 
-    const label = standardize(chara);
-
-    if (voiceLines.length > 0) {
-      for (const text of [label, ...voiceLines].filter(hasUnclosedBracket)) {
-        unresolved.push(`${label} | unclosed bracket: ${text}`);
-      }
+    for (const text of [label, ...voiceLines].filter(hasUnclosedBracket)) {
+      unresolved.push(`${label} | unclosed bracket: ${text}`);
     }
     for (const line of voiceLines) {
       const pairs = pair(charas, line);
@@ -211,10 +210,8 @@ export function findUnresolved(entries: RawEntry[]): string[] {
         assigned.add(name);
       }
     }
-    if (voiceLines.length > 0) {
-      for (const name of charas.filter((c) => !assigned.has(c))) {
-        unresolved.push(`${name} | no voice actor assigned`);
-      }
+    for (const name of charas.filter((c) => !assigned.has(c))) {
+      unresolved.push(`${name} | no voice actor assigned`);
     }
     return unresolved;
   });

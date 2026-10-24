@@ -1,4 +1,5 @@
 // Shows a small panel of random passwords, passphrases or URL tokens; click a row to copy it.
+import { el } from "../dom.ts";
 import {
   clamp,
   generatePassword,
@@ -221,18 +222,6 @@ const STYLE = `
     0%, 35% { background: color-mix(in srgb, var(--fg) 35%, transparent); }
   }
 `;
-
-type Child = Node | string;
-
-function el<K extends keyof HTMLElementTagNameMap>(
-  tag: K,
-  props: Partial<HTMLElementTagNameMap[K]> & { className?: string } = {},
-  ...children: Child[]
-): HTMLElementTagNameMap[K] {
-  const node = Object.assign(document.createElement(tag), props);
-  node.append(...children);
-  return node;
-}
 
 // Running again while the panel is open closes it.
 const existing = document.getElementById(HOST_ID);

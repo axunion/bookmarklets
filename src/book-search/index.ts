@@ -1,6 +1,7 @@
 // Shows a panel with library and Kindle+ search links for the book on the current page.
 // The title starts as the page's selection (empty when nothing is selected) and can be edited;
 // selecting text on the page afterwards replaces it.
+import { el } from "../dom.ts";
 import { cleanTitle, searchLinks } from "./title.ts";
 
 const HOST_ID = "bookmarklet-book-search";
@@ -54,18 +55,6 @@ const STYLE = `
   a:focus-visible { outline: 0; box-shadow: 0 0 0 3px var(--ring); }
   a.disabled { background: var(--fill-hover); color: var(--fg-sub); box-shadow: none; pointer-events: none; }
 `;
-
-type Child = Node | string;
-
-function el<K extends keyof HTMLElementTagNameMap>(
-  tag: K,
-  props: Partial<HTMLElementTagNameMap[K]> & { className?: string } = {},
-  ...children: Child[]
-): HTMLElementTagNameMap[K] {
-  const node = Object.assign(document.createElement(tag), props);
-  node.append(...children);
-  return node;
-}
 
 function selectedText(): string {
   return window.getSelection()?.toString().trim() ?? "";

@@ -1,3 +1,5 @@
+import { el } from "../dom.ts";
+
 const HOST_ID = "bookmarklet-extract-cast";
 
 // The toolbar is frosted glass; the text areas sit on a more opaque inner surface
@@ -82,18 +84,6 @@ const STYLE = `
 
 const ICON_HIDE = '<svg viewBox="0 0 24 24"><path d="M9 5l7 7-7 7"/></svg>';
 const ICON_SHOW = '<svg viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7"/></svg>';
-
-type Child = Node | string;
-
-function el<K extends keyof HTMLElementTagNameMap>(
-  tag: K,
-  props: Partial<HTMLElementTagNameMap[K]> & { className?: string } = {},
-  ...children: Child[]
-): HTMLElementTagNameMap[K] {
-  const node = Object.assign(document.createElement(tag), props);
-  node.append(...children);
-  return node;
-}
 
 /** Brings back a panel hidden by an earlier run; returns false when there is none. */
 export function revealPanel(): boolean {
