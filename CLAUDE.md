@@ -6,6 +6,7 @@ Each bookmarklet is built into a `javascript:` link on a GitHub Pages index page
 
 - Create `src/<kebab-case-name>/index.ts`; put extra modules beside it. Only `index.ts` is an entry point.
 - Add a row to the README bookmarklet list, keeping it in alphabetical order (the index page is sorted the same way).
+- A bookmarklet with a panel UI follows DESIGN.md as a baseline and may deviate where its purpose calls for it.
 - Put logic that does not touch the DOM in its own module with a `*.test.ts` beside it.
 - Run `pnpm fix`, `pnpm check`, `pnpm test` and `pnpm build` before finishing.
 - Use no external libraries or network resources (CDNs, remote scripts).

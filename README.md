@@ -7,6 +7,7 @@ A collection of bookmarklets. Each one is a TypeScript directory, built into a `
 ```
 src/<name>/index.ts  # one bookmarklet per directory, kebab-case name; extra modules live beside index.ts
 scripts/build.js     # bundles and minifies every src/<name>/index.ts with esbuild
+DESIGN.md            # baseline style guideline for bookmarklet panel UIs
 dist/index.html      # generated page listing every bookmarklet as a draggable link (not committed)
 ```
 
